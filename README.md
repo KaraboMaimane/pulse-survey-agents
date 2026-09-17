@@ -7,6 +7,7 @@ the AI-assisted workflow used to build this.
 ## Stack
 - Backend: NestJS, TypeORM, PostgreSQL
 - Frontend: React, TypeScript, Vite
+- Logging: Winston → Elasticsearch, visualized in Kibana
 - Local orchestration: Docker Compose
 
 ## Run locally
@@ -18,6 +19,8 @@ docker-compose up
 - Backend API: http://localhost:3000
 - Frontend: http://localhost:5173
 - Postgres: localhost:5432
+- Elasticsearch: http://localhost:9200
+- Kibana: http://localhost:5601
 
 The backend container does not run migrations/seed automatically — run them once against the running stack:
 ```bash
@@ -28,14 +31,19 @@ npm run migration:run
 npm run seed
 ```
 
+Elasticsearch takes ~20-30s to become healthy the first time (the backend waits for it via `depends_on`), so the
+first `docker-compose up` is slower than subsequent ones.
+
 ### Option B: Run backend and frontend directly (faster iteration)
 ```bash
-# 1. Start only Postgres
+# 1. Start Postgres (+ Elasticsearch if you want logs to land in ES/Kibana — optional)
 docker-compose up -d postgres
+docker-compose up -d elasticsearch kibana   # optional
 
 # 2. Backend
 cd backend
 cp .env.example .env
+# uncomment ELASTICSEARCH_NODE in .env only if you started elasticsearch above
 npm install
 npm run migration:run
 npm run seed
@@ -49,6 +57,17 @@ npm install
 npm run dev
 # App on http://localhost:5173
 ```
+
+## Logging
+Every request is logged (method, path, duration, `organizationId`, `userId`, `role`) via a global interceptor, and
+every unhandled error is logged with its full stack trace via a global exception filter — both through Winston. If
+`ELASTICSEARCH_NODE` is set (docker-compose sets it automatically), logs also ship to Elasticsearch under the
+`pulse-survey-logs-*` index pattern; if it isn't set, the app logs to the console only and runs exactly the same
+otherwise — Elasticsearch is optional, never a hard dependency for running the API. No passwords, tokens, or survey
+response content are ever logged.
+
+To explore logs in Kibana: open http://localhost:5601, create a data view for `pulse-survey-logs-*` (Stack
+Management → Data Views), then browse in Discover.
 
 ## Auth (local dev only)
 No external identity provider. Requests are identified via headers:

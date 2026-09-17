@@ -35,6 +35,23 @@ without a database connection, and the guard is the single choke point every req
 route that skips it. The e2e suite exists specifically to catch the failure mode RLS would prevent by construction
 (a service method that forgets to filter by org): see "Validation" below.
 
+### Logging: Winston + Elasticsearch, Elasticsearch optional at runtime
+Every request is logged (method, path, duration, `organizationId`, `userId`, `role`) via a global `NestInterceptor`,
+and every unhandled error is logged with its full stack trace via a global `ExceptionFilter` — both routed through
+a single Winston logger that Nest itself also uses (via `nest-winston`), so framework-level logs (route mapping,
+bootstrap, etc.) end up in the same structured stream as application logs. `ELASTICSEARCH_NODE` is read once at
+startup; if it's unset, the app logs to the console only and behaves identically otherwise — Elasticsearch is
+additive, never a hard runtime dependency, so `npm run start:dev` against just Postgres still works.
+
+Getting this actually working surfaced a real ordering bug worth noting, since it's the kind of thing that's easy
+to ship silently broken: the Winston transport list was originally built by reading `process.env.ELASTICSEARCH_NODE`
+at module-import time in a file imported by `app.module.ts`, but `@nestjs/config`'s `ConfigModule.forRoot()` (which
+loads `.env` into `process.env`) doesn't run until Nest instantiates that module — which happens *after* the import
+graph, including that file, has already been evaluated. The env var was always `undefined` by the time the
+transport list was built, so every log silently fell back to console-only, no error, nothing to notice unless you
+specifically went looking for entries in Elasticsearch (which I did — see "Validation" in the AI Workflow section).
+Fixed by loading `dotenv` explicitly as the first statement in `main.ts`, before any other local import.
+
 ### Known gaps / what I'd do with more time
 - **Race condition on duplicate submission** (see above) — add a partial unique index or advisory lock.
 - **No pagination** on any list endpoint — fine at seed-data scale, would need it before real usage.
@@ -42,11 +59,12 @@ route that skips it. The e2e suite exists specifically to catch the failure mode
   would silently orphan old answers' semantics. Out of scope per the brief, but the first thing I'd design next.
 - **RLS as defense-in-depth** — even with the guard in place, adding Postgres RLS as a second layer would remove the
   "a future service method that forgets to filter" failure mode entirely, at the cost of more complex local setup.
-- **Frontend has no loading skeletons/optimistic UI** — it's functional but minimal, per the brief's "keep it
-  minimal" instruction.
-- **No structured logging** (e.g. Winston) wired up — `Logger` is used for the one bootstrap log line, but
-  request-level logging with `organizationId` context wasn't built out, since nothing in the assignment's grading
-  criteria exercises log output and it would have eaten time better spent on the tested paths.
+- **Frontend has no optimistic UI** — it does show loading skeletons and a real error state, but there's no
+  optimistic update on submit; it waits for the response before showing success.
+- **Elasticsearch has no auth/TLS and Kibana has no saved dashboards** — both run wide open in docker-compose,
+  which is fine for local dev only (see the AWS note below for how this would need to change in production, and
+  see the multi-tenancy caveat below — these logs are operational, not customer-facing, so this is a smaller
+  concern than it would be for user data).
 
 ## Task 3 — Production Readiness on AWS (design-only)
 
@@ -168,6 +186,10 @@ What I checked, concretely:
 - **Drove the frontend in an actual browser** against the actual running backend — clicked through the login
   picker, filled in and submitted the real form, and switched between four different seeded users to visually
   confirm isolation, rather than reading the component code and assuming it was correct.
+- **Queried Elasticsearch directly** rather than trusting that "no errors in the console" meant logs were shipping —
+  this is what caught the `dotenv` load-order bug (see "Logging" above): the app started cleanly, no exceptions,
+  console logs looked correct, and it would have been easy to call that "done." Checking `GET /pulse-survey-logs-*/_count`
+  and getting `0` back is what surfaced that the Elasticsearch transport was silently a no-op.
 
 What I rejected or rewrote:
 - My own first draft of the "rolling 7-day window" implementation bucketed responses into fixed epoch-aligned
