@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Survey } from '../surveys/survey.entity';
 import { User } from '../users/user.entity';
 import { Answer } from './answer.entity';
@@ -17,6 +17,7 @@ export class Response {
   surveyId: string;
 
   @ManyToOne(() => Survey, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'survey_id' })
   survey: Survey;
 
   @Index()
@@ -24,6 +25,7 @@ export class Response {
   userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Index()

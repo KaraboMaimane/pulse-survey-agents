@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRole } from '../../shared/constants/roles.constant';
 import { Organization } from '../organizations/organization.entity';
 
@@ -12,6 +12,7 @@ export class User {
   organizationId: string;
 
   @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'organization_id' })
   organization: Organization;
 
   @Column()
