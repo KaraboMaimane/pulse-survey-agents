@@ -64,6 +64,6 @@ describe('MemberSurveyView', () => {
       );
     });
 
-    expect(await screen.findByText(/response has been recorded/i)).toBeInTheDocument();
+    expect(await screen.findByText(/thanks for your response/i)).toBeInTheDocument();
   });
 });

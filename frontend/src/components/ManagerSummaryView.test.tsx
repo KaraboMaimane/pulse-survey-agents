@@ -52,7 +52,8 @@ describe('ManagerSummaryView', () => {
   it('renders completion rate and per-question rollups', async () => {
     render(<ManagerSummaryView identity={identity} />);
 
-    expect(await screen.findByText(/weekly pulse — weekly summary/i)).toBeInTheDocument();
+    expect(await screen.findByText('Weekly Pulse')).toBeInTheDocument();
+    expect(screen.getByText('Weekly summary')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
