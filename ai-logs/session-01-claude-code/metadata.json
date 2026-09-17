@@ -1,0 +1,8 @@
+{
+  "title": "Pulse survey agent instructions",
+  "model": "claude-sonnet-5",
+  "effort": "low",
+  "createdAt": 1789669390442,
+  "lastActivityAt": 1789675524344,
+  "cwd": "<project root, redacted>"
+}
