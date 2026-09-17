@@ -57,7 +57,9 @@ describe('ManagerSummaryView', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
-    expect(screen.getByText(/average 4\.5 \/ 5 \(2 responses\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/yes: 1 · no: 1/i)).toBeInTheDocument();
+    expect(screen.getByText('4.5 / 5')).toBeInTheDocument();
+    expect(screen.getByText('2 responses')).toBeInTheDocument();
+    expect(screen.getByText(/yes: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/no: 1/i)).toBeInTheDocument();
   });
 });
